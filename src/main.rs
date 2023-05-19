@@ -1,23 +1,13 @@
 use axum::{
-    routing::{get, post},
     http::StatusCode,
-    //response::IntoResponse,
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use tracing::{info, debug};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() {
-    // initialize tracing
-    tracing_subscriber::fmt::init();
-    //println!("server starting...");
-    let number_of_yaks = 3;
-    // this creates a new event, outside of any spans.
-    debug!(number_of_yaks, "preparing to shave yaks");
-    // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
@@ -27,7 +17,6 @@ async fn main() {
     // run our app with hyper
     // `axum::Server` is a re-export of `hyper::Server`
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
@@ -66,4 +55,21 @@ struct CreateUser {
 struct User {
     id: u64,
     username: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_user() {
+        let user_to_create = CreateUser {
+            username: "Alexandre".to_string(),
+        };
+
+        let json = Json(user_to_create);
+        let (status, _) = create_user(json).await;
+
+        assert_eq!(status, 201)
+    }
 }
