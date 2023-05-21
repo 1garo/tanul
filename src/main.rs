@@ -6,6 +6,29 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
+use sqlx::postgres::PgPoolOptions;
+// use sqlx::mysql::MySqlPoolOptions;
+// etc.
+
+async fn conn() -> Result<(), sqlx::Error> {
+    // Create a connection pool
+    //  for MySQL, use MySqlPoolOptions::new()
+    //  for SQLite, use SqlitePoolOptions::new()
+    //  etc.
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect("postgres://postgres:password@localhost/test").await?;
+
+    // Make a simple query to return the given parameter (use a question mark `?` instead of `$1` for MySQL)
+    let row: (i64,) = sqlx::query_as("SELECT $1")
+        .bind(150_i64)
+        .fetch_one(&pool).await?;
+
+    assert_eq!(row.0, 150);
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     let app = Router::new()
@@ -68,8 +91,9 @@ mod tests {
         };
 
         let json = Json(user_to_create);
-        let (status, _) = create_user(json).await;
+        let (status, user) = create_user(json).await;
 
-        assert_eq!(status, 201)
+        assert_eq!(status, 201);
+        assert_eq!(user.id, 1337);
     }
 }
